@@ -1,0 +1,13 @@
+{
+  "atualizado_em": "2026-08-13T07:00:00-03:00",
+  "equipamentos": [
+    {"id": "e1", "tag": "ESC-01", "tipo": "Escavadeira",         "local": "Cabeceira Leste", "status": "operando",   "obs": "",                        "lat": -2.5832, "lng": -44.3598},
+    {"id": "e2", "tag": "ESC-02", "tipo": "Escavadeira",         "local": "Pátio G",         "status": "disponivel", "obs": "",                        "lat": -2.5861, "lng": -44.3641},
+    {"id": "e3", "tag": "RET-01", "tipo": "Retroescavadeira",    "local": "Cabeceira Oeste", "status": "manutencao", "obs": "Vazamento no hidráulico", "lat": -2.5901, "lng": -44.3672},
+    {"id": "e4", "tag": "CB-11",  "tipo": "Caminhão basculante", "local": "Pátio H",         "status": "operando",   "obs": "",                        "lat": -2.5883, "lng": -44.3619},
+    {"id": "e5", "tag": "CB-12",  "tipo": "Caminhão basculante", "local": "Pátio H",         "status": "parado",     "obs": "Aguardando pneu",         "lat": -2.5890, "lng": -44.3612},
+    {"id": "e6", "tag": "MUN-01", "tipo": "Caminhão munck",      "local": "Lajes",           "status": "disponivel", "obs": "",                        "lat": -2.5915, "lng": -44.3645},
+    {"id": "e7", "tag": "ROL-01", "tipo": "Rolo compactador",    "local": "Cabeceira Leste", "status": "operando",   "obs": "",                        "lat": -2.5841, "lng": -44.3588},
+    {"id": "e8", "tag": "GER-03", "tipo": "Gerador",             "local": "Canteiro Marka",  "status": "disponivel", "obs": "",                        "lat": -2.5926, "lng": -44.3663}
+  ]
+}

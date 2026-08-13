@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Mapa de Equipamentos — Marka Engenharia | TFPM</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --azul:#3871C1;
+  --azul-escuro:#2C5CA6;
+  --azul-claro:#8FB2DE;
+  --azul-bg:#E5E9F2;
+  --gold:#C9A84C;
+  --cinza:#656263;
+  --cinza-claro:#F4F6F9;
+  --linha:#D0D7E3;
+  --branco:#FFFFFF;
+  --verde:#2E7D32;
+  --ambar:#F57F17;
+  --ambar-texto:#B85E00;
+  --vermelho:#C62828;
+  --ink:#232733;
+  --sombra:0 2px 8px rgba(27,42,74,.08), 0 8px 24px rgba(27,42,74,.07);
+  --radius:14px;
+  --font:'Archivo',Arial,sans-serif;
+  --mono:'IBM Plex Mono','Courier New',monospace;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%}
+body{font-family:var(--font);background:var(--cinza-claro);color:var(--ink);display:flex;flex-direction:column;overflow:hidden}
+
+/* ── Header ─────────────────────────────── */
+header{
+  background:linear-gradient(135deg,#2C5CA6 0%,var(--azul) 55%,#4E85D4 100%);
+  color:#fff;padding:14px 22px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;
+  box-shadow:0 2px 12px rgba(27,42,74,.25);z-index:1200;position:relative;
+}
+header::after{
+  content:"";position:absolute;inset:0;pointer-events:none;opacity:.35;
+  background:repeating-linear-gradient(115deg,transparent 0 34px,rgba(255,255,255,.045) 34px 36px);
+}
+.brand{display:flex;flex-direction:column;line-height:1.05}
+.brand b{font-size:20px;font-weight:800;letter-spacing:.14em}
+.brand span{font-size:9.5px;letter-spacing:.42em;opacity:.85;font-weight:500;margin-top:2px}
+.head-div{width:1px;height:34px;background:rgba(255,255,255,.35)}
+.head-title{display:flex;flex-direction:column;line-height:1.2}
+.head-title b{font-size:15px;font-weight:700}
+.head-title span{font-size:11.5px;opacity:.85}
+.pill{
+  display:inline-flex;align-items:center;gap:7px;font-size:11px;font-weight:700;letter-spacing:.05em;
+  padding:6px 12px;border-radius:999px;background:rgba(255,255,255,.14);
+  border:1px solid rgba(255,255,255,.32);color:#fff;z-index:2;white-space:nowrap;
+}
+.pill i{width:8px;height:8px;border-radius:50%;background:#aab4c4;flex:none}
+.pill.online i{background:#7ed488;box-shadow:0 0 7px #7ed488}
+.pill.demo i{background:var(--gold);box-shadow:0 0 7px var(--gold)}
+.pill.erro i{background:#ff8a80;box-shadow:0 0 7px #ff8a80}
+.head-actions{margin-left:auto;display:flex;gap:8px;align-items:center;z-index:2}
+.btn{
+  font-family:var(--font);font-size:12.5px;font-weight:600;border:none;border-radius:9px;
+  padding:9px 14px;cursor:pointer;display:inline-flex;align-items:center;gap:7px;
+  transition:transform .12s,box-shadow .12s,background .12s;white-space:nowrap;
+}
+.btn:active{transform:scale(.97)}
+.btn-gold{background:var(--gold);color:#2c2610}
+.btn-gold:hover{background:#d8b95e}
+.btn-ghost{background:rgba(255,255,255,.14);color:#fff;border:1px solid rgba(255,255,255,.35)}
+.btn-ghost:hover{background:rgba(255,255,255,.24)}
+.btn-azul{background:var(--azul);color:#fff}
+.btn-azul:hover{background:#2f63ad}
+.btn-outline{background:#fff;color:var(--azul);border:1.5px solid var(--azul)}
+.btn-outline:hover{background:var(--azul-bg)}
+.btn-danger{background:#fff;color:var(--vermelho);border:1.5px solid var(--vermelho)}
+.btn-danger:hover{background:#fdecec}
+
+/* ── KPI strip ──────────────────────────── */
+#kpis{
+  display:grid;grid-template-columns:minmax(190px,1.25fr) repeat(5,minmax(110px,1fr));
+  gap:10px;padding:12px 22px;background:#fff;border-bottom:1px solid var(--linha);z-index:1100;
+}
+.kpi{
+  background:#fff;border:1px solid var(--linha);border-top:4px solid var(--azul);
+  border-radius:10px;padding:10px 14px 9px;display:flex;flex-direction:column;gap:2px;
+  cursor:default;
+}
+.kpi .v{font-size:26px;font-weight:800;color:var(--azul);font-variant-numeric:tabular-nums;line-height:1.1}
+.kpi .l{font-size:10.5px;font-weight:600;color:var(--cinza);letter-spacing:.06em;text-transform:uppercase}
+.kpi.hero{border-top-color:var(--gold);background:linear-gradient(180deg,#fff 0%,#fdfaf2 100%)}
+.kpi.hero .v{color:var(--gold);font-size:30px}
+.kpi.clickable{cursor:pointer;transition:box-shadow .12s,transform .12s}
+.kpi.clickable:hover{box-shadow:var(--sombra);transform:translateY(-1px)}
+.kpi.st-disponivel{border-top-color:var(--verde)}.kpi.st-disponivel .v{color:var(--verde)}
+.kpi.st-operando{border-top-color:var(--azul)}.kpi.st-operando .v{color:var(--azul)}
+.kpi.st-manutencao{border-top-color:var(--ambar)}.kpi.st-manutencao .v{color:var(--ambar-texto)}
+.kpi.st-parado{border-top-color:var(--vermelho)}.kpi.st-parado .v{color:var(--vermelho)}
+.kpi.active{outline:2px solid var(--azul);outline-offset:1px}
+#dispo-bar{height:7px;border-radius:4px;background:var(--azul-bg);margin-top:5px;overflow:hidden;display:flex;gap:2px}
+#dispo-bar i{display:block;height:100%;border-radius:3px}
+
+/* ── Layout ─────────────────────────────── */
+#main{flex:1;display:flex;min-height:0;position:relative}
+#map{flex:1;min-width:0;background:#0b1626}
+aside{
+  width:342px;background:#fff;border-left:1px solid var(--linha);display:flex;flex-direction:column;
+  min-height:0;z-index:1050;
+}
+.side-head{padding:14px 16px 10px;border-bottom:1px solid var(--linha);display:flex;flex-direction:column;gap:10px}
+.side-title{display:flex;align-items:baseline;justify-content:space-between}
+.side-title b{font-size:14px;font-weight:700;color:var(--ink)}
+.side-title span{font-size:11.5px;color:var(--cinza);font-variant-numeric:tabular-nums}
+#busca{
+  width:100%;padding:9px 12px;border:1.5px solid var(--linha);border-radius:9px;
+  font-family:var(--font);font-size:13px;background:var(--cinza-claro);color:var(--ink);
+}
+#busca:focus{outline:none;border-color:var(--azul);background:#fff}
+.filtros{display:flex;gap:6px;flex-wrap:wrap}
+.chip{
+  font-family:var(--font);font-size:11px;font-weight:600;padding:5px 10px;border-radius:999px;
+  border:1.5px solid var(--linha);background:#fff;color:var(--cinza);cursor:pointer;
+  display:inline-flex;align-items:center;gap:5px;transition:all .12s;
+}
+.chip .dot{width:8px;height:8px;border-radius:50%}
+.chip.on{border-color:currentColor}
+.chip.c-todos.on{background:var(--ink);border-color:var(--ink);color:#fff}
+.chip.c-disponivel{color:var(--verde)}.chip.c-disponivel.on{background:#e8f3e9}
+.chip.c-operando{color:var(--azul)}.chip.c-operando.on{background:var(--azul-bg)}
+.chip.c-manutencao{color:var(--ambar-texto)}.chip.c-manutencao.on{background:#fdf1e0}
+.chip.c-parado{color:var(--vermelho)}.chip.c-parado.on{background:#fdecec}
+.sels{display:flex;gap:8px}
+.sels select{
+  flex:1;min-width:0;padding:7px 8px;border:1.5px solid var(--linha);border-radius:8px;
+  font-family:var(--font);font-size:12px;color:var(--ink);background:#fff;
+}
+#lista{flex:1;overflow-y:auto;padding:10px 12px 16px;display:flex;flex-direction:column;gap:8px}
+#lista::-webkit-scrollbar{width:8px}
+#lista::-webkit-scrollbar-thumb{background:var(--linha);border-radius:4px}
+.card{
+  border:1px solid var(--linha);border-left:4px solid var(--cinza);border-radius:10px;
+  padding:10px 12px;cursor:pointer;background:#fff;transition:box-shadow .12s,transform .12s;
+  display:flex;flex-direction:column;gap:6px;
+}
+.card:hover{box-shadow:var(--sombra);transform:translateX(-2px)}
+.card.st-disponivel{border-left-color:var(--verde)}
+.card.st-operando{border-left-color:var(--azul)}
+.card.st-manutencao{border-left-color:var(--ambar)}
+.card.st-parado{border-left-color:var(--vermelho)}
+.card-top{display:flex;align-items:center;gap:8px}
+.card-top .tag{font-family:var(--mono);font-size:13px;font-weight:600;color:var(--ink)}
+.badge{
+  margin-left:auto;font-size:10px;font-weight:700;letter-spacing:.04em;padding:3px 8px;border-radius:999px;
+  display:inline-flex;align-items:center;gap:4px;white-space:nowrap;
+}
+.badge::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
+.badge.st-disponivel{background:#e8f3e9;color:var(--verde)}
+.badge.st-operando{background:var(--azul-bg);color:var(--azul)}
+.badge.st-manutencao{background:#fdf1e0;color:var(--ambar-texto)}
+.badge.st-parado{background:#fdecec;color:var(--vermelho)}
+.card-info{font-size:12px;color:var(--cinza);display:flex;gap:10px;flex-wrap:wrap}
+.card-info b{color:var(--ink);font-weight:600}
+.card-acoes{display:flex;gap:6px;margin-top:2px}
+.mini{
+  font-family:var(--font);font-size:11px;font-weight:600;padding:5px 10px;border-radius:7px;cursor:pointer;
+  border:1px solid var(--linha);background:var(--cinza-claro);color:var(--cinza);transition:all .12s;
+}
+.mini:hover{background:var(--azul-bg);color:var(--azul);border-color:var(--azul-claro)}
+.mini.del:hover{background:#fdecec;color:var(--vermelho);border-color:var(--vermelho)}
+.vazio{text-align:center;color:var(--cinza);font-size:13px;padding:30px 10px;line-height:1.6}
+
+/* ── Marcadores no mapa ─────────────────── */
+.pin{position:relative;filter:drop-shadow(0 3px 4px rgba(0,0,0,.45))}
+.pin .corpo{
+  width:34px;height:34px;border-radius:50% 50% 50% 4px;transform:rotate(-45deg);
+  border:2.5px solid #fff;display:flex;align-items:center;justify-content:center;
+}
+.pin .corpo span{
+  transform:rotate(45deg);font-family:var(--font);font-weight:800;font-size:11px;color:#fff;letter-spacing:.02em;
+}
+.pin.st-disponivel .corpo{background:var(--verde)}
+.pin.st-operando .corpo{background:var(--azul)}
+.pin.st-manutencao .corpo{background:var(--ambar)}
+.pin.st-parado .corpo{background:var(--vermelho)}
+.pin.pulsa::after{
+  content:"";position:absolute;left:50%;top:50%;width:46px;height:46px;border-radius:50%;
+  transform:translate(-50%,-50%);border:3px solid var(--gold);animation:pulsa 1.2s ease-out 3;
+}
+@keyframes pulsa{0%{opacity:1;transform:translate(-50%,-50%) scale(.5)}100%{opacity:0;transform:translate(-50%,-50%) scale(1.5)}}
+.leaflet-popup-content-wrapper{border-radius:12px;box-shadow:var(--sombra);font-family:var(--font)}
+.leaflet-popup-content{margin:14px 16px;line-height:1.45;min-width:190px}
+.pop .tag{font-family:var(--mono);font-weight:600;font-size:14.5px;color:var(--ink)}
+.pop .linha{font-size:12.5px;color:var(--cinza);margin-top:3px}
+.pop .linha b{color:var(--ink)}
+.pop .badge{margin:6px 0 2px;margin-left:0}
+.pop .acao{display:flex;gap:6px;margin-top:9px}
+.pop .obs{font-size:12px;color:var(--cinza);font-style:italic;margin-top:5px;border-top:1px dashed var(--linha);padding-top:5px}
+.dica-arrastar{font-size:10.5px;color:var(--azul);margin-top:6px;font-weight:600}
+
+/* ── Banner modo demonstração ───────────── */
+#banner{
+  position:absolute;left:50%;bottom:18px;transform:translateX(-50%);z-index:1150;
+  background:var(--ink);color:#fff;border-radius:12px;padding:11px 16px;box-shadow:var(--sombra);
+  font-size:12.5px;display:none;align-items:center;gap:12px;max-width:min(94%,600px);
+}
+#banner.show{display:flex}
+#banner .ponto{width:9px;height:9px;border-radius:50%;background:var(--gold);flex:none;animation:blink 1.6s infinite}
+@keyframes blink{50%{opacity:.3}}
+
+/* ── Modal ──────────────────────────────── */
+#veu{
+  position:fixed;inset:0;background:rgba(20,28,45,.55);backdrop-filter:blur(2px);
+  z-index:2000;display:none;align-items:center;justify-content:center;padding:16px;
+}
+#veu.show{display:flex}
+#modal{
+  background:#fff;border-radius:16px;width:min(430px,100%);max-height:92vh;overflow-y:auto;
+  box-shadow:0 20px 60px rgba(0,0,0,.35);animation:sobe .18s ease-out;
+}
+@keyframes sobe{from{transform:translateY(14px);opacity:0}to{transform:none;opacity:1}}
+#modal .mhead{
+  background:var(--azul);color:#fff;padding:14px 20px;border-radius:16px 16px 0 0;
+  display:flex;align-items:center;justify-content:space-between;
+}
+#modal .mhead b{font-size:15px;font-weight:700}
+#modal .mhead button{background:none;border:none;color:#fff;font-size:20px;cursor:pointer;line-height:1}
+#modal form{padding:18px 20px 20px;display:flex;flex-direction:column;gap:13px}
+.campo{display:flex;flex-direction:column;gap:5px}
+.campo label{font-size:11.5px;font-weight:700;color:var(--cinza);letter-spacing:.05em;text-transform:uppercase}
+.campo input,.campo select,.campo textarea{
+  padding:10px 12px;border:1.5px solid var(--linha);border-radius:9px;font-family:var(--font);
+  font-size:13.5px;color:var(--ink);background:var(--cinza-claro);
+}
+.campo input:focus,.campo select:focus,.campo textarea:focus{outline:none;border-color:var(--azul);background:#fff}
+.campo textarea{resize:vertical;min-height:56px}
+.duo{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.status-radio{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.status-radio label{
+  border:1.5px solid var(--linha);border-radius:9px;padding:9px 10px;font-size:12px;font-weight:600;
+  cursor:pointer;display:flex;align-items:center;gap:7px;color:var(--cinza);transition:all .12s;text-transform:none;letter-spacing:0;
+}
+.status-radio input{display:none}
+.status-radio .dot{width:10px;height:10px;border-radius:50%;flex:none}
+.status-radio label:has(input:checked){border-width:2px;color:var(--ink)}
+.status-radio label.o-disponivel:has(input:checked){border-color:var(--verde);background:#e8f3e9}
+.status-radio label.o-operando:has(input:checked){border-color:var(--azul);background:var(--azul-bg)}
+.status-radio label.o-manutencao:has(input:checked){border-color:var(--ambar);background:#fdf1e0}
+.status-radio label.o-parado:has(input:checked){border-color:var(--vermelho);background:#fdecec}
+.mfoot{display:flex;gap:9px;justify-content:flex-end;margin-top:4px}
+.nota-mapa{font-size:11.5px;color:var(--cinza);background:var(--azul-bg);border-radius:8px;padding:8px 11px;line-height:1.45}
+
+/* ── Toast ──────────────────────────────── */
+#toast{
+  position:fixed;top:16px;left:50%;transform:translateX(-50%) translateY(-80px);z-index:3000;
+  background:var(--ink);color:#fff;padding:11px 18px;border-radius:10px;font-size:13px;font-weight:600;
+  box-shadow:var(--sombra);transition:transform .25s ease;display:flex;align-items:center;gap:8px;max-width:92%;
+}
+#toast.show{transform:translateX(-50%) translateY(0)}
+#toast .ok{color:#7ed488}#toast .warn{color:var(--gold)}
+
+/* ── Rodapé ─────────────────────────────── */
+footer{
+  background:#fff;border-top:1px solid var(--linha);padding:7px 22px;font-size:11px;color:var(--cinza);
+  display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;z-index:1100;
+}
+footer b{color:var(--azul);font-weight:700}
+#hora-dado{font-variant-numeric:tabular-nums}
+
+/* ── Mobile ─────────────────────────────── */
+#tab-mobile{display:none}
+@media (max-width:860px){
+  header{padding:12px 14px;gap:10px}
+  .head-title{display:none}
+  .head-div{display:none}
+  #kpis{grid-template-columns:repeat(3,1fr);padding:10px 12px;gap:7px}
+  .kpi .v{font-size:20px}.kpi.hero .v{font-size:23px}
+  #main{flex-direction:column}
+  aside{position:absolute;inset:0;width:100%;border-left:none;display:none}
+  body.ver-lista aside{display:flex}
+  body.ver-lista #map{visibility:hidden}
+  #tab-mobile{
+    display:flex;position:absolute;bottom:16px;left:50%;transform:translateX(-50%);z-index:1160;
+    background:#fff;border-radius:999px;box-shadow:var(--sombra);border:1px solid var(--linha);overflow:hidden;
+  }
+  #tab-mobile button{
+    font-family:var(--font);font-size:13px;font-weight:700;border:none;background:none;
+    padding:11px 22px;cursor:pointer;color:var(--cinza);
+  }
+  #tab-mobile button.on{background:var(--azul);color:#fff}
+  #banner{bottom:72px}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand"><b>MARKA</b><span>ENGENHARIA</span></div>
+  <div class="head-div"></div>
+  <div class="head-title">
+    <b>Mapa de Equipamentos</b>
+    <span>Terminal Ferroviário da Ponta da Madeira · São Luís — MA</span>
+  </div>
+  <span class="pill" id="pill"><i></i><span id="pill-txt">Conectando…</span></span>
+  <div class="head-actions">
+    <button class="btn btn-ghost" id="bt-importar" title="Carregar um arquivo equipamentos.json para a nuvem">⤒ Importar</button>
+    <button class="btn btn-ghost" id="bt-exportar" title="Baixar um backup equipamentos.json">⤓ Backup</button>
+    <button class="btn btn-gold" id="bt-add">+ Equipamento</button>
+  </div>
+</header>
+
+<section id="kpis">
+  <div class="kpi hero" title="Disponível + Em operação, sobre o total">
+    <span class="v" id="k-df">—</span>
+    <span class="l">Disponibilidade Física</span>
+    <div id="dispo-bar"></div>
+  </div>
+  <div class="kpi clickable c-todos" data-f="todos"><span class="v" id="k-total">0</span><span class="l">Total</span></div>
+  <div class="kpi clickable st-disponivel" data-f="disponivel"><span class="v" id="k-disponivel">0</span><span class="l">Disponível</span></div>
+  <div class="kpi clickable st-operando" data-f="operando"><span class="v" id="k-operando">0</span><span class="l">Em operação</span></div>
+  <div class="kpi clickable st-manutencao" data-f="manutencao"><span class="v" id="k-manutencao">0</span><span class="l">Manutenção</span></div>
+  <div class="kpi clickable st-parado" data-f="parado"><span class="v" id="k-parado">0</span><span class="l">Parado</span></div>
+</section>
+
+<div id="main">
+  <div id="map"></div>
+
+  <aside>
+    <div class="side-head">
+      <div class="side-title"><b>Equipamentos</b><span id="contagem">0 de 0</span></div>
+      <input id="busca" type="search" placeholder="Buscar por tag, tipo ou local…">
+      <div class="filtros" id="chips">
+        <button class="chip c-todos on" data-f="todos">Todos</button>
+        <button class="chip c-disponivel" data-f="disponivel"><span class="dot" style="background:var(--verde)"></span>Disponível</button>
+        <button class="chip c-operando" data-f="operando"><span class="dot" style="background:var(--azul)"></span>Operando</button>
+        <button class="chip c-manutencao" data-f="manutencao"><span class="dot" style="background:var(--ambar)"></span>Manutenção</button>
+        <button class="chip c-parado" data-f="parado"><span class="dot" style="background:var(--vermelho)"></span>Parado</button>
+      </div>
+      <div class="sels">
+        <select id="f-tipo"><option value="">Tipo: todos</option></select>
+        <select id="f-local"><option value="">Local: todos</option></select>
+      </div>
+    </div>
+    <div id="lista"></div>
+  </aside>
+
+  <div id="tab-mobile">
+    <button id="tab-mapa" class="on">Mapa</button>
+    <button id="tab-lista">Lista</button>
+  </div>
+
+  <div id="banner">
+    <span class="ponto"></span>
+    <span id="banner-txt"><b>Modo demonstração.</b> As alterações não são salvas. Siga o <b>SETUP-FIREBASE.md</b> para ativar o tempo real.</span>
+  </div>
+</div>
+
+<footer>
+  <span><b>Marka Engenharia</b> · Contrato Vale S.A. — TFPM</span>
+  <span id="hora-dado">—</span>
+</footer>
+
+<div id="veu">
+  <div id="modal">
+    <div class="mhead"><b id="m-titulo">Novo equipamento</b><button id="m-fechar" type="button">✕</button></div>
+    <form id="form">
+      <div class="campo">
+        <label for="f-tag">Tag / Prefixo *</label>
+        <input id="f-tag" required maxlength="24" placeholder="Ex.: ESC-02, MK-101" autocomplete="off" style="font-family:var(--mono);text-transform:uppercase">
+      </div>
+      <div class="duo">
+        <div class="campo">
+          <label for="f-tipo-in">Tipo *</label>
+          <input id="f-tipo-in" required list="tipos" placeholder="Ex.: Escavadeira" autocomplete="off">
+          <datalist id="tipos"></datalist>
+        </div>
+        <div class="campo">
+          <label for="f-local-in">Local / Frente *</label>
+          <input id="f-local-in" required list="locais" placeholder="Ex.: Cabeceira Leste" autocomplete="off">
+          <datalist id="locais"></datalist>
+        </div>
+      </div>
+      <div class="campo">
+        <label>Status *</label>
+        <div class="status-radio">
+          <label class="o-disponivel"><input type="radio" name="f-status" value="disponivel" checked><span class="dot" style="background:var(--verde)"></span>Disponível</label>
+          <label class="o-operando"><input type="radio" name="f-status" value="operando"><span class="dot" style="background:var(--azul)"></span>Em operação</label>
+          <label class="o-manutencao"><input type="radio" name="f-status" value="manutencao"><span class="dot" style="background:var(--ambar)"></span>Manutenção</label>
+          <label class="o-parado"><input type="radio" name="f-status" value="parado"><span class="dot" style="background:var(--vermelho)"></span>Parado</label>
+        </div>
+      </div>
+      <div class="campo">
+        <label for="f-obs">Observação</label>
+        <textarea id="f-obs" maxlength="200" placeholder="Opcional. Ex.: aguardando peça, hidráulico vazando…"></textarea>
+      </div>
+      <div class="nota-mapa" id="nota-posicao">📍 O pino será criado no centro do mapa. Depois é só <b>arrastar</b> até a posição real do equipamento.</div>
+      <div class="mfoot">
+        <button type="button" class="btn btn-outline" id="m-cancelar">Cancelar</button>
+        <button type="submit" class="btn btn-azul" id="m-salvar">Salvar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div id="toast"></div>
+<input type="file" id="arquivo" accept=".json,application/json" style="display:none">
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+"use strict";
+/* ════════════════════════════════════════════════════════════
+   Mapa de Equipamentos — Marka Engenharia · TFPM
+   Tempo real via Firebase (Firestore + login anônimo).
+   Sem configuração, roda em MODO DEMONSTRAÇÃO (nada é salvo).
+   Passo a passo de ativação: SETUP-FIREBASE.md
+   ════════════════════════════════════════════════════════════ */
+
+/* ▼▼▼ COLE AQUI a configuração do seu projeto Firebase ▼▼▼
+   (Console Firebase → Configurações do projeto → Seus apps → Config)
+   Enquanto estiver vazio, o app roda em modo demonstração.     */
+const FIREBASE_CONFIG = {
+  apiKey: "",
+  authDomain: "",
+  projectId: "",
+  storageBucket: "",
+  messagingSenderId: "",
+  appId: ""
+};
+const FIREBASE_VERSAO = "10.14.1";
+const COLECAO = "equipamentos";
+/* ▲▲▲ nada abaixo desta linha precisa ser alterado ▲▲▲ */
+
+const STATUS = {
+  disponivel : {rot:"Disponível",   cls:"st-disponivel"},
+  operando   : {rot:"Em operação", cls:"st-operando"},
+  manutencao : {rot:"Manutenção",  cls:"st-manutencao"},
+  parado     : {rot:"Parado",      cls:"st-parado"}
+};
+const CORES = {disponivel:"#2E7D32", operando:"#3871C1", manutencao:"#F57F17", parado:"#C62828"};
+
+const TIPOS_SUGERIDOS = ["Escavadeira","Retroescavadeira","Pá carregadeira","Caminhão basculante",
+  "Caminhão munck","Caminhão pipa","Guindaste","Rolo compactador","Motoniveladora","Trator de esteira",
+  "Plataforma elevatória","Bomba de concreto","Caminhão betoneira","Gerador","Compressor","Torre de iluminação"];
+const LOCAIS_SUGERIDOS = ["Cabeceira Leste","Cabeceira Oeste","Pátio G","Pátio H","Pátio E","Pátio I",
+  "Lajes","Canteiro Marka","Oficina"];
+
+// Centro aproximado do TFPM — ajuste fino arrastando os pinos
+const CENTRO = [-2.5872, -44.3630];
+
+let dados = [];            // lista de equipamentos em memória
+let atualizadoEm = null;
+let marcadores = {};       // id -> L.Marker
+let filtroStatus = "todos";
+let editandoId = null;     // id em edição no modal (null = novo)
+let modo = "conectando";   // conectando | online | demo | erro
+let FS = null, db = null;  // módulo Firestore + instância
+let pulsarProximo = null;  // id que deve pulsar no próximo render
+let primeiraCarga = true;
+let sujoDemo = false;      // edições feitas em modo demo
+
+/* ── Mapa ── */
+const map = L.map("map", {zoomControl:false, attributionControl:true}).setView(CENTRO, 15);
+L.control.zoom({position:"bottomright"}).addTo(map);
+L.control.scale({imperial:false, position:"bottomleft"}).addTo(map);
+
+const satelite = L.tileLayer(
+  "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+  {maxZoom:19, attribution:"Imagens © Esri · Marka Engenharia"});
+const ruas = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+  {maxZoom:19, attribution:"© OpenStreetMap"});
+satelite.addTo(map);
+L.control.layers({"Satélite":satelite, "Mapa":ruas}, null, {position:"bottomright"}).addTo(map);
+
+/* ── Utilidades ── */
+const $ = s => document.querySelector(s);
+const esc = t => String(t ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const agora = () => new Date().toISOString();
+const novoId = () => (crypto.randomUUID ? crypto.randomUUID().slice(0,8) : Math.random().toString(36).slice(2,10));
+
+function toast(msg, tipo){
+  const t = $("#toast");
+  t.innerHTML = (tipo==="ok" ? '<span class="ok">✔</span>' : tipo==="warn" ? '<span class="warn">⚠</span>' : "") + esc(msg);
+  t.classList.add("show");
+  clearTimeout(toast._t);
+  toast._t = setTimeout(()=>t.classList.remove("show"), 3600);
+}
+
+function setModo(m, msgErro){
+  modo = m;
+  const pill = $("#pill"), txt = $("#pill-txt");
+  pill.className = "pill " + (m==="online" ? "online" : m==="demo" ? "demo" : m==="erro" ? "erro" : "");
+  txt.textContent = m==="online" ? "Tempo real ativo"
+                  : m==="demo"   ? "Modo demonstração"
+                  : m==="erro"   ? "Sem conexão"
+                  : "Conectando…";
+  $("#banner").classList.toggle("show", m==="demo" || m==="erro");
+  if(m==="erro" && msgErro) $("#banner-txt").innerHTML = "<b>Sem conexão com o banco.</b> " + esc(msgErro);
+  rodape();
+}
+
+function rodape(){
+  $("#hora-dado").textContent =
+    modo==="online" ? "Tempo real · Firebase · " + dados.length + " equipamentos" :
+    modo==="demo"   ? "Dados de exemplo — alterações não são salvas" :
+    modo==="erro"   ? "Sem conexão — exibindo últimos dados recebidos" : "—";
+}
+
+function iniciais(tipo){
+  const p = String(tipo||"?").trim().split(/\s+/);
+  return (p.length>1 ? p[0][0]+p[1][0] : p[0].slice(0,2)).toUpperCase();
+}
+
+/* ── Marcadores ── */
+function iconePara(eq, pulsa){
+  return L.divIcon({
+    className:"",
+    html:`<div class="pin ${STATUS[eq.status].cls}${pulsa?" pulsa":""}"><div class="corpo"><span>${esc(iniciais(eq.tipo))}</span></div></div>`,
+    iconSize:[34,34], iconAnchor:[17,32], popupAnchor:[0,-30]
+  });
+}
+
+function popupHtml(eq){
+  const s = STATUS[eq.status];
+  return `<div class="pop">
+    <div class="tag">${esc(eq.tag)}</div>
+    <span class="badge ${s.cls}">${s.rot}</span>
+    <div class="linha"><b>${esc(eq.tipo)}</b></div>
+    <div class="linha">Local: <b>${esc(eq.local)}</b></div>
+    ${eq.obs ? `<div class="obs">${esc(eq.obs)}</div>` : ""}
+    <div class="dica-arrastar">✋ Arraste o pino para reposicionar</div>
+    <div class="acao">
+      <button class="mini" onclick="abrirEdicao('${eq.id}')">✎ Editar</button>
+      <button class="mini del" onclick="excluirEq('${eq.id}')">🗑 Excluir</button>
+    </div>
+  </div>`;
+}
+
+function criarMarcador(eq, pulsa){
+  const m = L.marker([eq.lat, eq.lng], {icon:iconePara(eq,pulsa), draggable:true, title:eq.tag});
+  m.bindPopup(popupHtml(eq));
+  m.on("dragend", async () => {
+    const p = m.getLatLng();
+    eq.lat = +p.lat.toFixed(6); eq.lng = +p.lng.toFixed(6);
+    eq.atualizado = agora();
+    await salvar(eq, {silencioso:true});
+    toast(`${eq.tag} reposicionado`, "ok");
+  });
+  marcadores[eq.id] = m;
+  return m;
+}
+
+/* ── Persistência (nuvem ou memória) ── */
+async function salvar(eq, opts){
+  if(modo==="online"){
+    try{
+      const {id, ...resto} = eq;
+      pulsarProximo = opts && opts.pulsar ? id : null;
+      await FS.setDoc(FS.doc(db, COLECAO, id), resto);
+    }catch(e){
+      console.error(e);
+      toast("Falha ao salvar na nuvem — verifique a internet", "warn");
+    }
+  } else {
+    const i = dados.findIndex(d => d.id===eq.id);
+    if(i>=0) dados[i] = eq; else dados.push(eq);
+    sujoDemo = true;
+    render(opts && opts.pulsar ? eq.id : null);
+  }
+}
+
+async function remover(id){
+  if(modo==="online"){
+    try{ await FS.deleteDoc(FS.doc(db, COLECAO, id)); }
+    catch(e){ console.error(e); toast("Falha ao excluir na nuvem", "warn"); }
+  } else {
+    dados = dados.filter(e => e.id!==id);
+    sujoDemo = true;
+    render();
+  }
+}
+
+/* ── Render ── */
+function filtrados(){
+  const q = $("#busca").value.trim().toLowerCase();
+  const ft = $("#f-tipo").value, fl = $("#f-local").value;
+  return dados.filter(e =>
+    (filtroStatus==="todos" || e.status===filtroStatus) &&
+    (!ft || e.tipo===ft) && (!fl || e.local===fl) &&
+    (!q || [e.tag,e.tipo,e.local,e.obs].join(" ").toLowerCase().includes(q))
+  );
+}
+
+function render(pulsarId){
+  const vis = filtrados();
+
+  // mapa
+  for(const id in marcadores){ map.removeLayer(marcadores[id]); }
+  marcadores = {};
+  vis.forEach(e => criarMarcador(e, e.id===pulsarId).addTo(map));
+
+  // KPIs (sempre sobre o total, não sobre o filtro)
+  const n = dados.length;
+  const c = {disponivel:0, operando:0, manutencao:0, parado:0};
+  dados.forEach(e => c[e.status]++);
+  $("#k-total").textContent = n;
+  for(const k in c) $("#k-"+k).textContent = c[k];
+  const df = n ? (c.disponivel + c.operando) / n * 100 : 0;
+  $("#k-df").textContent = n ? df.toFixed(1).replace(".",",") + "%" : "—";
+  $("#dispo-bar").innerHTML = n ? Object.keys(c).map(k =>
+    c[k] ? `<i style="width:${(c[k]/n*100)}%;background:${CORES[k]}" title="${STATUS[k].rot}: ${c[k]}"></i>` : ""
+  ).join("") : "";
+
+  // selects de filtro (preserva seleção)
+  const preencher = (sel, valores, atual, rotulo) => {
+    sel.innerHTML = `<option value="">${rotulo}</option>` +
+      [...valores].sort((a,b)=>a.localeCompare(b,"pt")).map(v=>`<option${v===atual?" selected":""}>${esc(v)}</option>`).join("");
+  };
+  preencher($("#f-tipo"),  new Set(dados.map(e=>e.tipo)),  $("#f-tipo").value,  "Tipo: todos");
+  preencher($("#f-local"), new Set(dados.map(e=>e.local)), $("#f-local").value, "Local: todos");
+
+  // lista lateral
+  $("#contagem").textContent = `${vis.length} de ${n}`;
+  const ordem = {parado:0, manutencao:1, operando:2, disponivel:3};
+  const lista = [...vis].sort((a,b)=> ordem[a.status]-ordem[b.status] || a.tag.localeCompare(b.tag,"pt"));
+  $("#lista").innerHTML = lista.length ? lista.map(e => `
+    <div class="card ${STATUS[e.status].cls}" data-id="${e.id}">
+      <div class="card-top">
+        <span class="tag">${esc(e.tag)}</span>
+        <span class="badge ${STATUS[e.status].cls}">${STATUS[e.status].rot}</span>
+      </div>
+      <div class="card-info"><span><b>${esc(e.tipo)}</b></span><span>📍 ${esc(e.local)}</span></div>
+      ${e.obs ? `<div class="card-info" style="font-style:italic">${esc(e.obs)}</div>` : ""}
+      <div class="card-acoes">
+        <button class="mini" data-acao="editar">✎ Editar</button>
+        <button class="mini del" data-acao="excluir">🗑 Excluir</button>
+      </div>
+    </div>`).join("")
+    : `<div class="vazio">Nenhum equipamento encontrado.<br>Ajuste os filtros ou clique em <b>+ Equipamento</b>.</div>`;
+
+  rodape();
+}
+
+/* ── Interações da lista ── */
+$("#lista").addEventListener("click", ev => {
+  const card = ev.target.closest(".card"); if(!card) return;
+  const id = card.dataset.id;
+  const acao = ev.target.closest("[data-acao]")?.dataset.acao;
+  if(acao==="editar") return abrirEdicao(id);
+  if(acao==="excluir") return excluirEq(id);
+  const eq = dados.find(e=>e.id===id); if(!eq) return;
+  document.body.classList.remove("ver-lista");
+  $("#tab-mapa").classList.add("on"); $("#tab-lista").classList.remove("on");
+  map.invalidateSize();
+  map.flyTo([eq.lat,eq.lng], Math.max(map.getZoom(),17), {duration:.7});
+  setTimeout(()=>marcadores[id]?.openPopup(), 750);
+});
+
+/* ── Filtros ── */
+function setFiltroStatus(f){
+  filtroStatus = f;
+  document.querySelectorAll("#chips .chip").forEach(ch => ch.classList.toggle("on", ch.dataset.f===f));
+  document.querySelectorAll(".kpi.clickable").forEach(k => k.classList.toggle("active", k.dataset.f===f && f!=="todos"));
+  render();
+}
+$("#chips").addEventListener("click", ev => { const ch = ev.target.closest(".chip"); if(ch) setFiltroStatus(ch.dataset.f); });
+document.querySelectorAll(".kpi.clickable").forEach(k =>
+  k.addEventListener("click", () => setFiltroStatus(filtroStatus===k.dataset.f ? "todos" : k.dataset.f)));
+$("#busca").addEventListener("input", ()=>render());
+$("#f-tipo").addEventListener("change", ()=>render());
+$("#f-local").addEventListener("change", ()=>render());
+
+/* ── Modal ── */
+function abrirModal(titulo){
+  $("#m-titulo").textContent = titulo;
+  $("#veu").classList.add("show");
+  setTimeout(()=>$("#f-tag").focus(), 60);
+}
+function fecharModal(){ $("#veu").classList.remove("show"); $("#form").reset(); editandoId = null; }
+$("#m-fechar").addEventListener("click", fecharModal);
+$("#m-cancelar").addEventListener("click", fecharModal);
+$("#veu").addEventListener("click", ev => { if(ev.target.id==="veu") fecharModal(); });
+document.addEventListener("keydown", ev => { if(ev.key==="Escape") fecharModal(); });
+
+$("#bt-add").addEventListener("click", () => {
+  editandoId = null;
+  $("#form").reset();
+  $("#nota-posicao").style.display = "";
+  abrirModal("Novo equipamento");
+});
+
+window.abrirEdicao = function(id){
+  const eq = dados.find(e=>e.id===id); if(!eq) return;
+  editandoId = id;
+  $("#f-tag").value = eq.tag;
+  $("#f-tipo-in").value = eq.tipo;
+  $("#f-local-in").value = eq.local;
+  $("#f-obs").value = eq.obs || "";
+  document.querySelector(`input[name="f-status"][value="${eq.status}"]`).checked = true;
+  $("#nota-posicao").style.display = "none";
+  map.closePopup();
+  abrirModal("Editar " + eq.tag);
+};
+
+window.excluirEq = async function(id){
+  const eq = dados.find(e=>e.id===id); if(!eq) return;
+  if(!confirm(`Excluir ${eq.tag} (${eq.tipo})?`)) return;
+  map.closePopup();
+  await remover(id);
+  toast(`${eq.tag} excluído`, "warn");
+};
+
+$("#form").addEventListener("submit", async ev => {
+  ev.preventDefault();
+  const tag = $("#f-tag").value.trim().toUpperCase();
+  const tipo = $("#f-tipo-in").value.trim();
+  const local = $("#f-local-in").value.trim();
+  const status = document.querySelector('input[name="f-status"]:checked').value;
+  const obs = $("#f-obs").value.trim();
+  if(!tag || !tipo || !local) return;
+
+  const duplicada = dados.some(e => e.tag===tag && e.id!==editandoId);
+  if(duplicada){ toast(`Já existe um equipamento com a tag ${tag}`, "warn"); return; }
+
+  if(editandoId){
+    const base = dados.find(e=>e.id===editandoId);
+    const eq = {...base, tag, tipo, local, status, obs, atualizado:agora()};
+    fecharModal();
+    await salvar(eq, {pulsar:true});
+    toast(`${tag} atualizado`, "ok");
+  } else {
+    const c = map.getCenter();
+    const eq = {id:novoId(), tag, tipo, local, status, obs,
+      lat:+c.lat.toFixed(6), lng:+c.lng.toFixed(6), atualizado:agora()};
+    fecharModal();
+    await salvar(eq, {pulsar:true});
+    setTimeout(()=>marcadores[eq.id]?.openPopup(), 600);
+    toast(`${tag} criado — arraste o pino até a posição real`, "ok");
+  }
+});
+
+/* ── Backup / Importar ── */
+$("#bt-exportar").addEventListener("click", () => {
+  const obj = {atualizado_em:agora(), equipamentos:dados.map(({id,tag,tipo,local,status,obs,lat,lng,atualizado})=>({id,tag,tipo,local,status,obs,lat,lng,atualizado}))};
+  const blob = new Blob([JSON.stringify(obj,null,2)], {type:"application/json"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "equipamentos.json";
+  a.click();
+  URL.revokeObjectURL(a.href);
+  toast("Backup equipamentos.json baixado", "ok");
+});
+
+$("#bt-importar").addEventListener("click", ()=>$("#arquivo").click());
+$("#arquivo").addEventListener("change", ev => {
+  const f = ev.target.files[0]; if(!f) return;
+  const r = new FileReader();
+  r.onload = async () => {
+    try{
+      const obj = JSON.parse(r.result);
+      const lista = normalizar(Array.isArray(obj) ? obj : obj.equipamentos);
+      if(!lista.length) throw 0;
+      if(modo==="online"){
+        if(!confirm(`Enviar ${lista.length} equipamentos do arquivo para a nuvem? Itens com o mesmo id serão sobrescritos.`)) return;
+        const lote = FS.writeBatch(db);
+        lista.forEach(e => { const {id, ...resto} = e; lote.set(FS.doc(db, COLECAO, id), resto); });
+        await lote.commit();
+        toast(`${lista.length} equipamentos enviados para a nuvem`, "ok");
+      } else {
+        dados = lista;
+        render();
+        toast(`${lista.length} equipamentos carregados (somente nesta tela)`, "ok");
+      }
+      if(dados.length){ map.fitBounds(L.latLngBounds(dados.map(e=>[e.lat,e.lng])).pad(.25)); }
+    }catch(e){ console.error(e); toast("Arquivo inválido — esperado o formato de equipamentos.json", "warn"); }
+  };
+  r.readAsText(f);
+  ev.target.value = "";
+});
+
+function normalizar(lista){
+  return (lista||[]).filter(e=>e && e.tag).map((e,i)=>({
+    id: String(e.id || "e"+i+"_"+String(e.tag).replace(/\W/g,"")),
+    tag: String(e.tag).toUpperCase(),
+    tipo: e.tipo || "Equipamento",
+    local: e.local || "—",
+    status: STATUS[e.status] ? e.status : "disponivel",
+    obs: e.obs || "",
+    lat: Number.isFinite(+e.lat) ? +e.lat : CENTRO[0],
+    lng: Number.isFinite(+e.lng) ? +e.lng : CENTRO[1],
+    atualizado: e.atualizado || null
+  }));
+}
+
+/* ── Datalists ── */
+$("#tipos").innerHTML  = TIPOS_SUGERIDOS.map(t=>`<option value="${t}">`).join("");
+$("#locais").innerHTML = LOCAIS_SUGERIDOS.map(t=>`<option value="${t}">`).join("");
+
+/* ── Abas mobile ── */
+$("#tab-mapa").addEventListener("click", ()=>{ document.body.classList.remove("ver-lista"); $("#tab-mapa").classList.add("on"); $("#tab-lista").classList.remove("on"); map.invalidateSize(); });
+$("#tab-lista").addEventListener("click", ()=>{ document.body.classList.add("ver-lista"); $("#tab-lista").classList.add("on"); $("#tab-mapa").classList.remove("on"); });
+
+/* ── Aviso ao sair com edições de demonstração ── */
+window.addEventListener("beforeunload", ev => { if(modo!=="online" && sujoDemo){ ev.preventDefault(); ev.returnValue = ""; } });
+
+/* ── Modo demonstração ── */
+async function carregarDemo(){
+  setModo("demo");
+  try{
+    const r = await fetch("equipamentos.json", {cache:"no-store"});
+    if(!r.ok) throw 0;
+    const obj = await r.json();
+    dados = normalizar(Array.isArray(obj) ? obj : obj.equipamentos);
+  }catch(e){ dados = []; }
+  render();
+  if(dados.length){ map.fitBounds(L.latLngBounds(dados.map(e=>[e.lat,e.lng])).pad(.25)); }
+}
+
+/* ── Conexão Firebase ── */
+async function iniciar(){
+  const cfgOk = FIREBASE_CONFIG.apiKey && FIREBASE_CONFIG.projectId;
+  if(!cfgOk){ carregarDemo(); return; }
+  try{
+    const base = `https://www.gstatic.com/firebasejs/${FIREBASE_VERSAO}/`;
+    const [appM, authM, fsM] = await Promise.all([
+      import(base + "firebase-app.js"),
+      import(base + "firebase-auth.js"),
+      import(base + "firebase-firestore.js")
+    ]);
+    const app = appM.initializeApp(FIREBASE_CONFIG);
+    await authM.signInAnonymously(authM.getAuth(app));
+    FS = fsM;
+    db = fsM.getFirestore(app);
+
+    fsM.onSnapshot(fsM.collection(db, COLECAO),
+      snap => {
+        dados = normalizar(snap.docs.map(d => ({...d.data(), id:d.id})));
+        if(modo!=="online") setModo("online");
+        const p = pulsarProximo; pulsarProximo = null;
+        render(p);
+        if(primeiraCarga){
+          primeiraCarga = false;
+          if(dados.length){ map.fitBounds(L.latLngBounds(dados.map(e=>[e.lat,e.lng])).pad(.25)); }
+          else toast("Nuvem conectada e vazia — cadastre equipamentos ou use Importar", "warn");
+        }
+      },
+      err => {
+        console.error(err);
+        setModo("erro", "Verifique as regras do Firestore e a internet.");
+      });
+  }catch(e){
+    console.error(e);
+    toast("Não foi possível conectar ao Firebase — exibindo modo demonstração", "warn");
+    carregarDemo();
+  }
+}
+iniciar();
+</script>
+</body>
+</html>
